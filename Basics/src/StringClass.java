@@ -1,4 +1,4 @@
-public class StringClass {
+public  class StringClass {
     public static void main(String[] args) {
         String name="shavali";
         //convert string to number
@@ -18,4 +18,5 @@ public class StringClass {
         // Integer.toOctalString(i1); // octal
         // Integer.toString(i1, 2);   // also binary
     }
+
 }
