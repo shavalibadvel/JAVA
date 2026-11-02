@@ -1,5 +1,7 @@
 public class SuperClass {
-
+        public static void main1(){
+            System.out.println("SuperClass.main");
+        }
         public SuperClass() {
             System.out.println("SuperClass()");
         }
@@ -9,6 +11,9 @@ public class SuperClass {
 
 }
 class ChildClass extends SuperClass {
+    public static void main1(){
+        System.out.println("Child.main");
+    }
     ChildClass() {
         super();
     }
@@ -23,8 +28,8 @@ class ChildClass extends SuperClass {
         System.out.println("it is child class method2");
     }
     public static void main(String[] args) {
-        ChildClass childClass = new ChildClass();
-        childClass.printMethod(10,11);
-        childClass.printMethod2(10,11);
+
+
+
     }
 }
