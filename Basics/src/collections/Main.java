@@ -35,7 +35,7 @@ public class Main {
         vector.add("shavali");
         vector.add("badvel");
         vector.add("goodvel");
-        vector.add(null);
+        //vector.add(null);
         vector.sort((a,b)->a.compareTo(b));
         vector.get(3);
         vector.remove(3);
@@ -47,5 +47,18 @@ public class Main {
         map.put("hello", 1);
         map.put("world", 2);
         map.put("shavali", 3);
+
+        String[] strs = {"hello", "world", "shavali"};
+
+        List<String> listx = List.of("hello", "world", "shavali");
+        List<String> list2=new ArrayList<>(listx);
+        list2.add("hello2");
+        list2.add("world2");
+        System.out.println(list2);
+
+        List<String> list3=list2;
+        list3.add("hello3");
+        System.out.println(list3);
+        System.out.println(list2);
     }
 }
