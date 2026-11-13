@@ -1,104 +1,95 @@
 package Solution;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.*;
 import java.util.*;
+import java.util.stream.*;
+
+import static Solution.CustomScenarios.highestStrikeRatePlayerEachTeam;
 
 public class IPLClass {
-    // Simple CSV loader: skips the header, returns each row as String[]
-    static List<String[]> readCSV(String path) throws IOException {
-        List<String[]> rows = new ArrayList<>();
-        BufferedReader br = new BufferedReader(new FileReader(path));
-        br.readLine(); // skip header
-        String line;
-        while ((line = br.readLine()) != null) {
-            rows.add(line.split(","));
+
+    static String[] matchHeaders;
+    static String[] deliveryHeaders;
+    static List<String[]> matches    = new ArrayList<>();
+    static List<String[]> deliveries = new ArrayList<>();
+    static void loadMatches(String path) throws IOException {
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(path))) {
+            matchHeaders = parseCsvLine(br.readLine());
+            String line;
+            while ((line = br.readLine()) != null) matches.add(parseCsvLine(line));
         }
-        br.close();
-        return rows;
+    }
+    static void loadDeliveries(String path) throws IOException {
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(path))) {
+            deliveryHeaders = parseCsvLine(br.readLine());
+            String line;
+            while ((line = br.readLine()) != null) deliveries.add(parseCsvLine(line));
+        }
+    }
+    static String[] parseCsvLine(String line) {
+        if (line == null || line.isEmpty()) return new String[0];
+        List<String> fields = new ArrayList<>(24);
+        StringBuilder sb = new StringBuilder(64);
+        boolean inQuotes = false;
+
+        for (int i = 0, n = line.length(); i < n; i++) {
+            char c = line.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < n && line.charAt(i + 1) == '"') { sb.append('"'); i++; }
+                    else inQuotes = false;
+                } else sb.append(c);
+            } else {
+                if (c == '"') inQuotes = true;
+                else if (c == ',') { fields.add(sb.toString().trim()); sb.setLength(0); }
+                else sb.append(c);
+            }
+        }
+        fields.add(sb.toString().trim());
+        return fields.toArray(new String[0]);
     }
 
+    // ---------- ACCESSORS ----------
+    static int idx(String[] headers, String column) {
+        for (int i = 0; i < headers.length; i++)
+            if (headers[i].equalsIgnoreCase(column)) return i;
+        throw new IllegalArgumentException("column '" + column + "' not found");
+    }
+    static int mIdx(String c) { return idx(matchHeaders, c); }
+    static int dIdx(String c) { return idx(deliveryHeaders, c); }
+
+    static int    intAt(String[] r, int i) { return i < r.length && !r[i].isEmpty() ? Integer.parseInt(r[i]) : 0; }
+    static String strAt(String[] r, int i) { return i < r.length ? r[i] : ""; }
+
+    // ---------- VENUE (structural normalization only) ----------
+    static String canonicalVenue(String raw) {
+        if (raw == null || raw.isEmpty()) return raw;
+        int comma = raw.indexOf(',');
+        return (comma >= 0 ? raw.substring(0, comma) : raw).trim();
+    }
+
+
+
+    // ---------- MAIN ----------
     public static void main(String[] args) throws IOException {
-        List<String[]> matches    = readCSV("/Users/shavali/Documents/Java Learning/IPL-project/src/Solution/archive/matches.csv");
-        List<String[]> deliveries = readCSV("/Users/shavali/Documents/Java Learning/IPL-project/src/Solution/archive/deliveries.csv");
 
-        // Column indices in matches.csv
-        final int M_ID = 0, M_SEASON = 1, M_WINNER = 10;
+        loadMatches("/Users/shavali/Documents/Java Learning/IPL-project/src/Solution/archive/matches.csv");
+        loadDeliveries("/Users/shavali/Documents/Java Learning/IPL-project/src/Solution/archive/deliveries.csv");
 
-        // Column indices in deliveries.csv
-        final int D_MATCH_ID = 0, D_BOWLING_TEAM = 3, D_BOWLER = 8,
-                D_WIDE = 10, D_NOBALL = 13, D_BATSMAN_RUNS = 15, D_EXTRA = 16;
+        //OwnScenarios.highestIndividualScoreOfTeam(deliveries,matches,2016);
+        //OwnScenarios.highestWicketTakerTeam(deliveries,matches,2017);
+        //OwnScenarios.most100And50PerTeam(deliveries,matches,2016);
+        //OwnScenarios.bestEconomyPerTeam(deliveries,matches,2016);
+        //OwnScenarios.bestPlayerOfPowerplayPerTeam(deliveries,matches,2016);
+//        Comparator<String> x=new Comparator<String>() {
+//            @Override
+//            public int compare(String o1, String o2) {
+//                return o1.compareTo(o2);
+//            }
+//        };
+        OwnScenarios.mostDotBallBowler(deliveries,matches,2016);
 
-        // ---------- 1. Matches played per year ----------
-        Map<String, Integer> matchesPerYear = new HashMap<>();
-        for (String[] m : matches) {
-            matchesPerYear.merge(m[M_SEASON], 1, Integer::sum);
-        }
-        System.out.println("1. Matches per year: " + matchesPerYear);
 
-        // ---------- 2. Matches won by each team ----------
-        Map<String, Integer> winsPerTeam = new HashMap<>();
-        for (String[] m : matches) {
-            String winner = m[M_WINNER];
-            if (!winner.isEmpty()) winsPerTeam.merge(winner, 1, Integer::sum);
-        }
-        System.out.println("2. Matches won per team: " + winsPerTeam);
-
-        // Build sets of match IDs for 2016 and 2015
-        Set<String> ids2016 = new HashSet<>();
-        Set<String> ids2015 = new HashSet<>();
-        for (String[] m : matches) {
-            if (m[M_SEASON].equals("2016")) ids2016.add(m[M_ID]);
-            if (m[M_SEASON].equals("2015")) ids2015.add(m[M_ID]);
-        }
-
-        // ---------- 3. Extra runs conceded per team in 2016 ----------
-        Map<String, Integer> extras2016 = new HashMap<>();
-        for (String[] d : deliveries) {
-            if (ids2016.contains(d[D_MATCH_ID])) {
-                extras2016.merge(d[D_BOWLING_TEAM], Integer.parseInt(d[D_EXTRA]), Integer::sum);
-            }
-        }
-        System.out.println("3. Extra runs conceded in 2016: " + extras2016);
-
-        // ---------- 4. Top economical bowlers in 2015 ----------
-        Map<String, Integer> runs  = new HashMap<>();
-        Map<String, Integer> balls = new HashMap<>();
-        for (String[] d : deliveries) {
-            if (!ids2015.contains(d[D_MATCH_ID])) continue;
-            try {
-                int wide   = Integer.parseInt(d[D_WIDE]);
-                int noball = Integer.parseInt(d[D_NOBALL]);
-                int conceded = Integer.parseInt(d[D_BATSMAN_RUNS]) + wide + noball;
-                runs.merge(d[D_BOWLER], conceded, Integer::sum);
-                if (wide == 0 && noball == 0) {
-                    balls.merge(d[D_BOWLER], 1, Integer::sum);
-                }
-            } catch (NumberFormatException e) {
-                System.out.println("Error parsing: " + String.join(",", d));
-            }
-        }
-        List<Map.Entry<String, Double>> economy = new ArrayList<>();
-        for (String bowler : runs.keySet()) {
-            int b = balls.getOrDefault(bowler, 0);
-            if (b == 0) continue;
-            economy.add(new AbstractMap.SimpleEntry<>(bowler, runs.get(bowler) / (b / 6.0)));
-        }
-        economy.sort(Map.Entry.comparingByValue());
-        System.out.println("4. Top 10 economical bowlers 2015:");
-        economy.stream().limit(10).forEach(e ->
-                System.out.printf("   %-25s %.2f%n", e.getKey(), e.getValue()));
-
-        // ---------- 5. Custom scenario: top run-scorers ----------
-        Map<String, Integer> batsmanRuns = new HashMap<>();
-        for (String[] d : deliveries) {
-            batsmanRuns.merge(d[5], Integer.parseInt(d[D_BATSMAN_RUNS]), Integer::sum); // col 5 = batsman
-        }
-        System.out.println("5. Top 10 run-scorers:");
-        batsmanRuns.entrySet().stream()
-                .sorted((a, b) -> b.getValue() - a.getValue())
-                .limit(10)
-                .forEach(e -> System.out.printf("   %-25s %d%n", e.getKey(), e.getValue()));
     }
 }
